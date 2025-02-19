@@ -4,15 +4,17 @@ import joblib
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 # 🎯 Load trained model (Ensure the file exists in the directory)
-MODEL_PATH = "/Users/fatimaiqbal/bike_project/bike_sharing_model.pkl"
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "bike_sharing_model.pkl")
 
 try:
     model = joblib.load(MODEL_PATH)
     trained_features = model.feature_names_in_
+    st.success("✅ Model loaded successfully!")
 except FileNotFoundError:
-    st.error("🚨 Model file not found! Ensure 'bike_sharing_model.pkl' exists.")
+    st.error("🚨 Model file not found! Ensure 'bike_sharing_model.pkl' exists in your project folder.")
     model = None
     trained_features = []
 
@@ -46,40 +48,37 @@ season_features = {f"season_{i}": 1 if season_map[season] == i else 0 for i in [
 weather_features = {f"weather_{i}": 1 if weather_map[weather] == i else 0 for i in [2, 3, 4]}
 
 # 🔄 Prepare input DataFrame with correct features
-input_data = pd.DataFrame([[temp, 0, humidity, windspeed, hour, day, month, year,
-                            season_features["season_2"], season_features["season_3"], season_features["season_4"],
-                            holiday, workingday,
-                            weather_features["weather_2"], weather_features["weather_3"], weather_features["weather_4"],
-                            weekday, is_weekend]],
-                          columns=trained_features)
-
-# Ensure feature alignment (Fixing Feature Mismatch Issues)
-missing_cols = [col for col in trained_features if col not in input_data.columns]
-for col in missing_cols:
-    input_data[col] = 0  # Add missing columns with zero values
-
-# 🔮 Predict rentals
 if model:
+    input_data = pd.DataFrame([[temp, 0, humidity, windspeed, hour, day, month, year,
+                                season_features["season_2"], season_features["season_3"], season_features["season_4"],
+                                holiday, workingday,
+                                weather_features["weather_2"], weather_features["weather_3"], weather_features["weather_4"],
+                                weekday, is_weekend]],
+                              columns=trained_features)
+
+    # Ensure feature alignment (Fixing Feature Mismatch Issues)
+    missing_cols = [col for col in trained_features if col not in input_data.columns]
+    for col in missing_cols:
+        input_data[col] = 0  # Add missing columns with zero values
+
+    # 🔮 Predict rentals
     predicted_rentals = model.predict(input_data)[0]
     st.subheader(f"📊 Predicted Bike Rentals: {round(predicted_rentals)}")
-else:
-    st.error("⚠️ Prediction not available. Model not loaded.")
 
-# 🎯 AI-Powered Marketing Insights
-def marketing_message(predictions):
-    if predictions > 200:
-        return "🚀 High Demand! Consider surge pricing and social media ads."
-    elif 100 <= predictions <= 200:
-        return "📈 Moderate Demand! Target work commuters with limited-time offers."
-    else:
-        return "📉 Low Demand! Offer discounts for off-peak hours and family packages."
+    # 🎯 AI-Powered Marketing Insights
+    def marketing_message(predictions):
+        if predictions > 200:
+            return "🚀 High Demand! Consider surge pricing and social media ads."
+        elif 100 <= predictions <= 200:
+            return "📈 Moderate Demand! Target work commuters with limited-time offers."
+        else:
+            return "📉 Low Demand! Offer discounts for off-peak hours and family packages."
 
-if "predicted_rentals" in locals():
     message = marketing_message(predicted_rentals)
     st.info(f"💡 Marketing Strategy: {message}")
 
 # 📊 Load training data for visualizations
-DATA_PATH = "/Users/fatimaiqbal/bike_project/train.csv"
+DATA_PATH = os.path.join(os.path.dirname(__file__), "train.csv")
 
 @st.cache_data
 def load_data():
@@ -129,28 +128,13 @@ if df is not None:
         plt.ylabel("Average Bike Rentals")
         plt.title("Impact of Weather on Bike Rentals")
         st.pyplot(fig)
-
-    # 🍂 Bike Rentals by Season
-    if "season" in df.columns:
-        st.subheader("🍂 Bike Rentals by Season")
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.barplot(data=df, x="season", y="count", ax=ax, palette="coolwarm")
-        plt.xlabel("Season (1 = Winter, 4 = Fall)")
-        plt.ylabel("Average Bike Rentals")
-        plt.title("Bike Rentals by Season")
-        st.pyplot(fig)
-
-    # 📆 Weekends vs. Weekdays Bike Rentals
-    if "is_weekend" in df.columns:
-        st.subheader("📆 Weekends vs. Weekdays Bike Rentals")
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.boxplot(data=df, x="is_weekend", y="count", ax=ax, palette="magma")
-        plt.xticks(ticks=[0, 1], labels=["Weekday", "Weekend"])
-        plt.xlabel("Day Type")
-        plt.ylabel("Bike Rentals")
-        plt.title("Bike Rentals on Weekdays vs. Weekends")
-        st.pyplot(fig)
-
-# 🎉 Final success message
-st.success("🎉 AI-Powered Bike Rental Prediction App is Ready!")
-
+        
+# 🍂 Bike Rentals by Season
+if "season" in df.columns:
+    st.subheader("🍂 Bike Rentals by Season")
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.barplot(data=df, x="season", y="count", ax=ax, palette="coolwarm")
+    plt.xlabel("Season (1 = Winter, 4 = Fall)")  # FIXED: Changed plt.xl to plt.xlabel()
+    plt.ylabel("Average Bike Rentals")
+    plt.title("Bike Rentals by Season")
+    st.pyplot(fig)
