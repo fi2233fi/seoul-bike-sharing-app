@@ -91,11 +91,16 @@ def load_data():
         st.error("⚠️ train.csv not found! Please ensure the dataset is available.")
         return None
 
+# ✅ Debugging: Check if dataset loads properly
 df = load_data()
 if df is not None:
-    # Debugging: Display dataset columns to confirm 'hour' exists
-    st.write("📌 **Dataset Columns:**", df.columns.tolist())
+    st.write("📌 **Dataset Shape:**", df.shape)  # Show dataset dimensions
+    st.write("📌 **First 5 Rows:**")  
+    st.write(df.head())  # Display first few rows
+else:
+    st.error("⚠️ Dataset not found or empty! Check file path.")
 
+if df is not None:
     # 📈 Visualization: Bike Rentals by Hour
     if "hour" in df.columns and "count" in df.columns:
         st.subheader("📊 Bike Rental Trends")
@@ -146,5 +151,6 @@ if df is not None:
         plt.title("Bike Rentals on Weekdays vs. Weekends")
         st.pyplot(fig)
 
+# 🎉 Final success message
 st.success("🎉 AI-Powered Bike Rental Prediction App is Ready!")
 
