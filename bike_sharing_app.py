@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 from sklearn.linear_model import LinearRegression
+
+st.set_page_config(page_title="Seoul Bike Sharing App", layout="wide")
 st.write("📂 Files in project folder:", os.listdir())
 
 # 🎯 Paths
@@ -23,7 +25,6 @@ except FileNotFoundError:
         df_train = pd.read_csv(DATA_PATH)
         df_train.columns = df_train.columns.str.lower().str.strip()
 
-        # Extract features from datetime if needed
         if 'datetime' in df_train.columns:
             df_train['datetime'] = pd.to_datetime(df_train['datetime'])
             df_train['hour'] = df_train['datetime'].dt.hour
@@ -32,11 +33,16 @@ except FileNotFoundError:
             df_train['year'] = df_train['datetime'].dt.year
             df_train['weekday'] = df_train['datetime'].dt.weekday
 
-        df_train = df_train.rename(columns={"cnt": "count"})
-        df_train = df_train.dropna()
+        if 'cnt' in df_train.columns:
+            df_train.rename(columns={'cnt': 'count'}, inplace=True)
+
+        df_train.dropna(inplace=True)
+
+        if 'weekday' not in df_train.columns:
+            raise ValueError("❌ 'weekday' column is missing after preprocessing.")
+
         df_train["is_weekend"] = df_train["weekday"].apply(lambda x: 1 if x >= 5 else 0)
 
-        # One-hot encoding
         season_dummies = pd.get_dummies(df_train["season"], prefix="season", drop_first=True)
         weather_dummies = pd.get_dummies(df_train["weather"], prefix="weather", drop_first=True)
 
@@ -64,7 +70,6 @@ st.title("🚲 AI-Powered Bike Rental Prediction & Marketing Insights")
 
 # 📊 Sidebar Inputs
 st.sidebar.header("Enter Bike Rental Conditions")
-
 hour = st.sidebar.slider("Hour of the Day", 0, 23, 12)
 temp = st.sidebar.slider("Temperature (°C)", -10, 40, 20)
 humidity = st.sidebar.slider("Humidity (%)", 0, 100, 50)
@@ -85,17 +90,20 @@ workingday = 1 if st.sidebar.radio("Is it a Working Day?", ["No", "Yes"]) == "Ye
 season_features = {f"season_{i}": 1 if season_map[season] == i else 0 for i in [2, 3, 4]}
 weather_features = {f"weather_{i}": 1 if weather_map[weather] == i else 0 for i in [2, 3, 4]}
 
+# 🧠 Predict
 if model:
-    input_data = pd.DataFrame([[temp, 0, humidity, windspeed, hour, day, month, year,
-                                holiday, workingday, weekday, is_weekend,
-                                season_features["season_2"], season_features["season_3"], season_features["season_4"],
-                                weather_features["weather_2"], weather_features["weather_3"], weather_features["weather_4"]]],
-                              columns=trained_features)
+    input_values = [temp, 0, humidity, windspeed, hour, day, month, year,
+                    holiday, workingday, weekday, is_weekend,
+                    season_features["season_2"], season_features["season_3"], season_features["season_4"],
+                    weather_features["weather_2"], weather_features["weather_3"], weather_features["weather_4"]]
 
-    # Fix missing columns
+    input_data = pd.DataFrame([input_values], columns=trained_features)
+
     for col in trained_features:
         if col not in input_data.columns:
             input_data[col] = 0
+
+    input_data = input_data[trained_features]
 
     predicted_rentals = model.predict(input_data)[0]
     st.subheader(f"📊 Predicted Bike Rentals: {round(predicted_rentals)}")
@@ -110,7 +118,7 @@ if model:
 
     st.info(f"💡 Marketing Strategy: {marketing_message(predicted_rentals)}")
 
-# 📥 Load Data for Visuals
+# 📥 Load data for visuals
 @st.cache_data
 def load_data():
     try:
@@ -125,7 +133,7 @@ def load_data():
             df['year'] = df['datetime'].dt.year
             df['weekday'] = df['datetime'].dt.weekday
 
-        if 'cnt' in df.columns and 'count' not in df.columns:
+        if 'cnt' in df.columns:
             df.rename(columns={'cnt': 'count'}, inplace=True)
 
         return df
@@ -133,9 +141,8 @@ def load_data():
         st.error("⚠️ train.csv not found! Please ensure the dataset is available.")
         return None
 
-df = load_data()
-
 # 📊 Visualizations
+df = load_data()
 if df is not None:
     st.write("📌 **Dataset Shape:**", df.shape)
     st.write("📌 **First 5 Rows:**")
@@ -175,4 +182,5 @@ if df is not None:
         plt.ylabel("Average Bike Rentals")
         plt.title("Bike Rentals by Season")
         st.pyplot(fig)
+
 
