@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 from sklearn.linear_model import LinearRegression
+st.write("📂 Files in project folder:", os.listdir())
 
 # 🎯 Paths
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "bike_sharing_model.pkl")
